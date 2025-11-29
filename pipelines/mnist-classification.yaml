@@ -9,7 +9,7 @@ settings:
 inputs:
   raw_data:
     type: uri_folder
-    path: azureml://datastores/workspaceblobstore/paths/mnist-data/
+    path: azureml://datastores/workspaceblobstore/paths/mnist/
 
 jobs:
   dataprep:
