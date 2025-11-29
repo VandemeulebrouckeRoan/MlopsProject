@@ -41,8 +41,12 @@ def main(args):
     print("MNIST Digit Classifier Training")
     print("=" * 60)
     
-    # Set up MLflow
-    mlflow.tensorflow.autolog()
+    # Simple MLflow setup - just basic logging
+    try:
+        import mlflow
+        mlflow.start_run()
+    except Exception as e:
+        print(f"MLflow not available, continuing without it: {e}")
     
     # Load preprocessed data
     data_path = Path(args.input_data)
@@ -104,9 +108,13 @@ def main(args):
     print(f"Test Loss: {test_loss:.4f}")
     print(f"Test Accuracy: {test_accuracy:.4f}")
     
-    # Log final metrics
-    mlflow.log_metric("test_loss", test_loss)
-    mlflow.log_metric("test_accuracy", test_accuracy)
+    # Log final metrics if MLflow is available
+    try:
+        import mlflow
+        mlflow.log_metric("test_loss", test_loss)
+        mlflow.log_metric("test_accuracy", test_accuracy)
+    except:
+        pass
     
     # Save model
     output_dir = Path(args.model_output)
@@ -116,8 +124,12 @@ def main(args):
     print(f"\nSaving model to {model_path}...")
     model.save(model_path)
     
-    # Also save in MLflow format
-    mlflow.tensorflow.log_model(model, "model")
+    # End MLflow run if it was started
+    try:
+        import mlflow
+        mlflow.end_run()
+    except:
+        pass
     
     print("\n" + "=" * 60)
     print("Training Complete!")
