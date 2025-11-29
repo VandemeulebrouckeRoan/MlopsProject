@@ -127,9 +127,15 @@ def main(args):
     # End MLflow run if it was started
     try:
         import mlflow
-        mlflow.end_run()
-    except:
-        pass
+        mlflow.start_run()
+
+        # Disable TensorFlow autologging and general autologging
+        # This prevents AzureML from trying to register models in MLflow Model Registry
+        mlflow.autolog(disable=True)
+
+    except Exception as e:
+        print(f"MLflow not available, continuing without it: {e}")
+
     
     print("\n" + "=" * 60)
     print("Training Complete!")
