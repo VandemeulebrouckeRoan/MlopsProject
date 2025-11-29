@@ -89,21 +89,23 @@ jobs:
         echo "Pipeline timed out"
         exit 1
     
-    - name: Azure -- Download Model
+    - name: Download Model
       shell: bash
       run: |
         az extension add --name ml -y --upgrade
         az configure --defaults group=mlproject workspace=mlprojectws
         
-        # Download model directly from job outputs
-        az ml job download --name mnist-${{ github.sha }}-${{ github.run_id }} \
+        # Download model from the pipeline job outputs
+        az ml job download --name ${{ steps.run_pipeline.outputs.run_id }} \
           --download-path ./model \
-          --output-name model_output
+          --output-name model_output \
+          --all
+      continue-on-error: false
 
     - name: Upload model artifact
       uses: actions/upload-artifact@v4
       with:
-        name: trained-model
+        name: mnist-model
         path: ./model
 
 
@@ -113,7 +115,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
     
     - name: Download Model Artifact
       uses: actions/download-artifact@v4
