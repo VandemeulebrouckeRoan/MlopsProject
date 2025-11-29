@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
 
 env:
-  RESOURCE_GROUP: 'your-resource-group'
-  WORKSPACE_NAME: 'your-workspace-name'
-  SUBSCRIPTION_ID: 'your-subscription-id'
+  RESOURCE_GROUP: 'mlproject'
+  WORKSPACE_NAME: 'mlprojectws'
+  SUBSCRIPTION_ID: '6f293a1e-1dca-4a4a-ae35-67ac8536d9dd'
 
 jobs:
   setup-and-train:
@@ -100,7 +100,7 @@ jobs:
     
     - name: Upload Model Artifact
       if: success()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mnist-model
         path: ./model
@@ -111,10 +111,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Download Model Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: mnist-model
         path: ./inference/model
