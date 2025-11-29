@@ -117,16 +117,12 @@ def main(args):
         pass
     
     # Save model
-    # Save model to AzureML output folder
-    from pathlib import Path
-
     output_dir = Path(args.model_output)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    model_path = output_dir / "model.keras"
-    print(f"Saving model to {model_path}")
+    model_path = output_dir / 'model.keras'
+    
+    print(f"\nSaving model to {model_path}...")
     model.save(model_path)
-
     
     # End MLflow run if it was started
     try:
