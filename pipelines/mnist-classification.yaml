@@ -1,0 +1,36 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+display_name: MNIST Digit Classification Pipeline
+description: End-to-end pipeline for MNIST digit classification
+
+settings:
+  default_compute: azureml:mnist-cluster
+
+inputs:
+  raw_data:
+    type: uri_folder
+    path: azureml://datastores/workspaceblobstore/paths/mnist-data/
+
+jobs:
+  dataprep:
+    type: command
+    component: azureml:mnist_dataprep@latest
+    inputs:
+      input_data: ${{parent.inputs.raw_data}}
+    outputs:
+      output_data:
+        type: uri_folder
+        mode: rw_mount
+  
+  training:
+    type: command
+    component: azureml:mnist_training@latest
+    inputs:
+      input_data: ${{parent.jobs.dataprep.outputs.output_data}}
+      epochs: 15
+      batch_size: 128
+      learning_rate: 0.001
+    outputs:
+      model_output:
+        type: uri_folder
+        mode: rw_mount

@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: mnist_dataprep
+display_name: MNIST Data Preparation
+version: 1.0.0
+type: command
+description: Load and preprocess MNIST dataset from CSV
+
+inputs:
+  input_data:
+    type: uri_folder
+    description: Input data folder containing mnist_full.csv
+
+outputs:
+  output_data:
+    type: uri_folder
+    description: Preprocessed data output
+
+code: ./code
+
+environment: azureml:mnist-preprocessing@latest
+
+command: >-
+  python dataprep.py
+  --input_data ${{inputs.input_data}}
+  --output_data ${{outputs.output_data}}

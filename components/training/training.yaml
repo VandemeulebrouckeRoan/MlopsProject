@@ -1,0 +1,40 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: mnist_training
+display_name: MNIST Model Training
+version: 1.0.0
+type: command
+description: Train CNN model for MNIST digit classification
+
+inputs:
+  input_data:
+    type: uri_folder
+    description: Preprocessed training data
+  epochs:
+    type: integer
+    description: Number of training epochs
+    default: 15
+  batch_size:
+    type: integer
+    description: Batch size for training
+    default: 128
+  learning_rate:
+    type: number
+    description: Learning rate
+    default: 0.001
+
+outputs:
+  model_output:
+    type: uri_folder
+    description: Trained model output
+
+code: ./code
+
+environment: azureml:mnist-training@latest
+
+command: >-
+  python train.py
+  --input_data ${{inputs.input_data}}
+  --model_output ${{outputs.model_output}}
+  --epochs ${{inputs.epochs}}
+  --batch_size ${{inputs.batch_size}}
+  --learning_rate ${{inputs.learning_rate}}

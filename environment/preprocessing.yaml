@@ -1,0 +1,6 @@
+$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
+name: mnist-preprocessing
+version: 1
+description: Environment for MNIST data preprocessing
+conda_file: conda-preprocessing.yaml
+image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest
