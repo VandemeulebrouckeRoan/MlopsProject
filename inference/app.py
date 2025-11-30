@@ -28,16 +28,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global model variable
 model = None
+model_loaded = False
 
 class DrawingData(BaseModel):
     image: str  # base64 encoded image
 
 def load_model():
-    """Load the model from the local filesystem"""
-    global model
+    """Load the model from the local filesystem - ONLY ONCE"""
+    global model, model_loaded
     
-    if model is not None:
+    # Check if already loaded
+    if model_loaded and model is not None:
         return model
     
     # Model will be copied here during Docker build
@@ -49,10 +52,14 @@ def load_model():
         print(f"ERROR: Model not found at {model_path}")
         raise FileNotFoundError(f"Model file not found at {model_path}")
     
-    model = tf.keras.models.load_model(model_path)
-    print("Model loaded successfully!")
-    
-    return model
+    try:
+        model = tf.keras.models.load_model(model_path)
+        model_loaded = True
+        print("Model loaded successfully!")
+        return model
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        raise
 
 @app.on_event("startup")
 async def startup_event():
@@ -476,15 +483,12 @@ async def predict_drawing(data: DrawingData):
     """
     global model
     
-    # Ensure model is loaded
+    # Simple check - model should already be loaded from startup
     if model is None:
-        try:
-            load_model()
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Model not loaded: {str(e)}"
-            }
+        return {
+            "success": False,
+            "error": "Model not loaded. Please check server logs."
+        }
     
     try:
         # Decode base64 image
@@ -533,15 +537,12 @@ async def predict(file: UploadFile = File(...)):
     """
     global model
     
-    # Ensure model is loaded
+    # Simple check - model should already be loaded from startup
     if model is None:
-        try:
-            load_model()
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Model not loaded: {str(e)}"
-            }
+        return {
+            "success": False,
+            "error": "Model not loaded. Please check server logs."
+        }
     
     try:
         # Read image
