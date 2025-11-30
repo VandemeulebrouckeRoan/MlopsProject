@@ -5,11 +5,12 @@ description: End-to-end pipeline for MNIST digit classification
 
 settings:
   default_compute: azureml:mnist-cluster
+  force_rerun: true  # ✅ Add this to disable caching
 
 inputs:
   raw_data:
     type: uri_folder
-    path: azureml:mnist@latest  # ← Just reference by name!
+    path: azureml:mnist@latest
 
 jobs:
   dataprep:
