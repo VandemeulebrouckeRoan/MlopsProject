@@ -93,20 +93,40 @@ jobs:
       shell: bash
       run: |
         az extension add --name ml -y --upgrade
-        az configure --defaults group=mlproject workspace=mlprojectws
+        az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
         
-        # Download model from the pipeline job outputs
-        az ml job download --name ${{ steps.run_pipeline.outputs.run_id }} \
-          --download-path ./model \
-          --output-name model_output \
+        echo "Downloading model from job: ${{ steps.run_pipeline.outputs.run_id }}"
+        
+        # Download all outputs
+        az ml job download \
+          --name ${{ steps.run_pipeline.outputs.run_id }} \
+          --download-path ./downloaded-model \
           --all
+        
+        echo "Download complete. Structure:"
+        ls -R ./downloaded-model
+        
+        # Find the model file
+        mkdir -p ./model
+        echo "Searching for model.keras..."
+        find ./downloaded-model -name "model.keras" -type f -exec cp -v {} ./model/ \;
+        
+        # Verify
+        if [ -f ./model/model.keras ]; then
+          echo "✅ Model ready for upload"
+          ls -lh ./model/
+        else
+          echo "❌ model.keras not found!"
+          find ./downloaded-model -type f
+          exit 1
+        fi
       continue-on-error: false
 
     - name: Upload model artifact
       uses: actions/upload-artifact@v4
       with:
         name: mnist-model
-        path: ./model
+        path: ./model/model.keras
 
 
   build-and-deploy:
