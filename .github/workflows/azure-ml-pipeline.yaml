@@ -195,37 +195,59 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     
-    - name: Login to Docker Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ secrets.DOCKER_REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-      continue-on-error: true
-    
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./inference
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_REGISTRY }}/mnist-classifier:latest
-          ${{ secrets.DOCKER_REGISTRY }}/mnist-classifier:${{ github.sha }}
-        cache-from: type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/mnist-classifier:buildcache
-        cache-to: type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/mnist-classifier:buildcache,mode=max
-      continue-on-error: true
-    
-    - name: Build Docker Image Locally (Fallback)
-      if: failure()
+    - name: Build Docker Image
       run: |
-        echo "⚠️  Registry push failed or not configured. Building locally..."
         docker build -t mnist-classifier:latest ./inference
-        echo "✅ Local build successful"
+        echo "✅ Docker build successful"
     
-    - name: Deploy to Kubernetes (Optional)
-      if: github.ref == 'refs/heads/main'
+    - name: Stop Old Container (if running)
       run: |
-        echo "🚀 Kubernetes deployment ready"
-        # kubectl apply -f ./kubernetes/deployment.yaml
-        # kubectl apply -f ./kubernetes/service.yaml
-        # kubectl set image deployment/mnist-classifier mnist-api=${{ secrets.DOCKER_REGISTRY }}/mnist-classifier:${{ github.sha }}
+        docker stop mnist-classifier-app 2>/dev/null || true
+        docker rm mnist-classifier-app 2>/dev/null || true
+        echo "✅ Cleaned up old container"
+    
+    - name: Run Docker Container
+      run: |
+        docker run -d \
+          --name mnist-classifier-app \
+          -p 8000:8000 \
+          --restart unless-stopped \
+          mnist-classifier:latest
+        
+        echo "✅ Container started!"
+        echo "Waiting for app to be ready..."
+        sleep 5
+        
+        # Check if it's running
+        if docker ps | grep -q mnist-classifier-app; then
+          echo "✅ Container is running"
+          docker logs mnist-classifier-app
+        else
+          echo "❌ Container failed to start"
+          docker logs mnist-classifier-app
+          exit 1
+        fi
+    
+    - name: Test API
+      run: |
+        echo "Testing API health endpoint..."
+        sleep 3
+        curl -f http://localhost:8000/health || exit 1
+        echo "✅ API is responding!"
+    
+    - name: Display Access Information
+      run: |
+        echo "========================================="
+        echo "🎉 Deployment Complete!"
+        echo "========================================="
+        echo ""
+        echo "🌐 Web UI: http://localhost:8000"
+        echo "📚 API Docs: http://localhost:8000/docs"
+        echo "❤️  Health: http://localhost:8000/health"
+        echo ""
+        echo "Container name: mnist-classifier-app"
+        echo "To view logs: docker logs mnist-classifier-app"
+        echo "To stop: docker stop mnist-classifier-app"
+        echo ""
+        echo "========================================="
+
