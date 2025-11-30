@@ -97,11 +97,11 @@ jobs:
         
         echo "Downloading model from job: ${{ steps.run_pipeline.outputs.run_id }}"
         
-        # Download all outputs
+        # Download the specific model_output from training component
         az ml job download \
           --name ${{ steps.run_pipeline.outputs.run_id }} \
           --download-path ./downloaded-model \
-          --all
+          --output-name model_output
         
         echo "Download complete. Structure:"
         ls -R ./downloaded-model
@@ -117,6 +117,7 @@ jobs:
           ls -lh ./model/
         else
           echo "❌ model.keras not found!"
+          echo "Available files:"
           find ./downloaded-model -type f
           exit 1
         fi
