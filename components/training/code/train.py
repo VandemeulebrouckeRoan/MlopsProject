@@ -140,39 +140,39 @@ def main(args):
     print("Training Complete!")
     print("=" * 60)
 
-    if __name__ == "__main__":
-        parser = argparse.ArgumentParser(description="Train MNIST CNN model")
-        
-        parser.add_argument(
-            "--input_data",
-            type=str,
-            required=True,
-            help="Path to preprocessed data"
-        )
-        parser.add_argument(
-            "--model_output",
-            type=str,
-            required=True,
-            help="Path to save trained model"
-        )
-        parser.add_argument(
-            "--epochs",
-            type=int,
-            default=15,
-            help="Number of training epochs"
-        )
-        parser.add_argument(
-            "--batch_size",
-            type=int,
-            default=128,
-            help="Batch size for training"
-        )
-        parser.add_argument(
-            "--learning_rate",
-            type=float,
-            default=0.001,
-            help="Learning rate"
-        )
-        
-        args = parser.parse_args()
-        main(args)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train MNIST CNN model")
+    
+    parser.add_argument(
+        "--input_data",
+        type=str,
+        required=True,
+        help="Path to preprocessed data"
+    )
+    parser.add_argument(
+        "--model_output",
+        type=str,
+        required=True,
+        help="Path to save trained model"
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=15,
+        help="Number of training epochs"
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=128,
+        help="Batch size for training"
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=0.001,
+        help="Learning rate"
+    )
+    
+    args = parser.parse_args()
+    main(args)
