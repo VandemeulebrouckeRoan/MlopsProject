@@ -94,14 +94,32 @@ jobs:
       run: |
         az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
         
-        echo "Downloading model from job: ${{ steps.run_pipeline.outputs.run_id }}"
+        echo "Pipeline job: ${{ steps.run_pipeline.outputs.run_id }}"
         
-        # Get the training child job name
-        TRAINING_JOB=$(az ml job list --parent-job-name ${{ steps.run_pipeline.outputs.run_id }} --query "[?display_name=='MNIST Model Training'].name" -o tsv)
-        echo "Training job: $TRAINING_JOB"
+        # List all child jobs to find the training job
+        echo "Finding training child job..."
+        az ml job list --parent-job-name ${{ steps.run_pipeline.outputs.run_id }} --query "[].{name:name, display_name:display_name}" -o table
         
-        # Download from the training job directly
+        # Get the training job name (it's the second job after dataprep)
+        TRAINING_JOB=$(az ml job list --parent-job-name ${{ steps.run_pipeline.outputs.run_id }} --query "[?contains(display_name, 'Training') || contains(display_name, 'training')].name" -o tsv | head -1)
+        
+        if [ -z "$TRAINING_JOB" ]; then
+          echo "Training job not found, trying alternative approach..."
+          # Get all child jobs and take the last one (training is usually last)
+          TRAINING_JOB=$(az ml job list --parent-job-name ${{ steps.run_pipeline.outputs.run_id }} --query "[-1].name" -o tsv)
+        fi
+        
+        echo "Training job ID: $TRAINING_JOB"
+        
+        if [ -z "$TRAINING_JOB" ]; then
+          echo "❌ Could not find training job"
+          exit 1
+        fi
+        
+        # Download from the training job
+        echo "Downloading model from training job..."
         mkdir -p ./model-downloads
+        
         az ml job download \
           --name $TRAINING_JOB \
           --output-name model_output \
@@ -120,12 +138,13 @@ jobs:
           echo "✅ Model found!"
           ls -lh ./model/
         else
-          echo "❌ Still not found. Trying to find ANY files:"
+          echo "❌ model.keras not found"
+          echo "All downloaded files:"
           find ./model-downloads -type f
           
-          # Last resort - check if model was saved at all
-          echo "Checking training job outputs:"
-          az ml job show --name $TRAINING_JOB --query outputs
+          # Show what outputs are available
+          echo "Available outputs from training job:"
+          az ml job show --name $TRAINING_JOB --query outputs -o json
           exit 1
         fi
 
