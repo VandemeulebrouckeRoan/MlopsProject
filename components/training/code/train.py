@@ -117,6 +117,7 @@ def main(args):
         pass
     
     # Save model
+    # Save model
     output_dir = Path(args.model_output)
     output_dir.mkdir(parents=True, exist_ok=True)
     model_path = output_dir / 'model.keras'
@@ -124,56 +125,54 @@ def main(args):
     print(f"\nSaving model to {model_path}...")
     model.save(model_path)
     
+    print(f"Model saved successfully!")
+    print(f"Model file size: {model_path.stat().st_size / 1024 / 1024:.2f} MB")
+    
     # End MLflow run if it was started
     try:
         import mlflow
-        mlflow.start_run()
-
-        # Disable TensorFlow autologging and general autologging
-        # This prevents AzureML from trying to register models in MLflow Model Registry
         mlflow.autolog(disable=True)
-
+        mlflow.end_run()
     except Exception as e:
-        print(f"MLflow not available, continuing without it: {e}")
-
+        print(f"MLflow cleanup: {e}")
     
     print("\n" + "=" * 60)
     print("Training Complete!")
     print("=" * 60)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train MNIST CNN model")
-    
-    parser.add_argument(
-        "--input_data",
-        type=str,
-        required=True,
-        help="Path to preprocessed data"
-    )
-    parser.add_argument(
-        "--model_output",
-        type=str,
-        required=True,
-        help="Path to save trained model"
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=15,
-        help="Number of training epochs"
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=128,
-        help="Batch size for training"
-    )
-    parser.add_argument(
-        "--learning_rate",
-        type=float,
-        default=0.001,
-        help="Learning rate"
-    )
-    
-    args = parser.parse_args()
-    main(args)
+    if __name__ == "__main__":
+        parser = argparse.ArgumentParser(description="Train MNIST CNN model")
+        
+        parser.add_argument(
+            "--input_data",
+            type=str,
+            required=True,
+            help="Path to preprocessed data"
+        )
+        parser.add_argument(
+            "--model_output",
+            type=str,
+            required=True,
+            help="Path to save trained model"
+        )
+        parser.add_argument(
+            "--epochs",
+            type=int,
+            default=15,
+            help="Number of training epochs"
+        )
+        parser.add_argument(
+            "--batch_size",
+            type=int,
+            default=128,
+            help="Batch size for training"
+        )
+        parser.add_argument(
+            "--learning_rate",
+            type=float,
+            default=0.001,
+            help="Learning rate"
+        )
+        
+        args = parser.parse_args()
+        main(args)
