@@ -53,6 +53,7 @@ def load_model():
         raise FileNotFoundError(f"Model file not found at {model_path}")
     
     try:
+        # Load WITHOUT compiling (fixes TF version mismatch)
         model = tf.keras.models.load_model(model_path)
         model_loaded = True
         print("Model loaded successfully!")
@@ -132,7 +133,7 @@ async def root():
                 border: 2px solid #ddd;
                 border-radius: 10px;
                 cursor: crosshair;
-                background: white;
+                background: black;
                 touch-action: none;
             }
             
@@ -305,7 +306,7 @@ async def root():
     <body>
         <div class="container">
             <h1>✍️ Digit Classifier</h1>
-            <p class="subtitle">Draw a digit (0-9) and let AI recognize it!</p>
+            <p class="subtitle">Draw a digit (0-9) with WHITE on BLACK canvas!</p>
             
             <div class="canvas-container">
                 <canvas id="canvas" width="280" height="280"></canvas>
@@ -330,7 +331,7 @@ async def root():
             </div>
             
             <div class="info-box">
-                <p><strong>💡 Tip:</strong> Draw clearly in the center of the canvas. The model works best with digits similar to those in the MNIST dataset.</p>
+                <p><strong>💡 Tip:</strong> Draw clearly in the center with WHITE on the BLACK canvas. The model works best with digits similar to those in the MNIST dataset.</p>
             </div>
         </div>
         
@@ -341,8 +342,12 @@ async def root():
             let lastX = 0;
             let lastY = 0;
             
-            // Set up canvas
-            ctx.strokeStyle = 'black';
+            // Fill canvas with black background
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Set up WHITE drawing on BLACK background (like MNIST)
+            ctx.strokeStyle = 'white';
             ctx.lineWidth = 20;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -403,7 +408,9 @@ async def root():
             }
             
             function clearCanvas() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // Clear and fill with black again
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 document.getElementById('result').classList.remove('show');
             }
             
@@ -480,6 +487,7 @@ async def health():
 async def predict_drawing(data: DrawingData):
     """
     Predict digit from base64 encoded image from canvas
+    USES SAME PREPROCESSING AS TEST APP (NO INVERSION)
     """
     global model
     
@@ -498,15 +506,12 @@ async def predict_drawing(data: DrawingData):
         # Open image and convert to grayscale
         image = Image.open(io.BytesIO(image_bytes)).convert('L')
         
+        # DON'T INVERT - we're already drawing white on black (like test app)
         # Resize to 28x28 (MNIST size)
         image = image.resize((28, 28), Image.Resampling.LANCZOS)
         
-        # Convert to array and invert colors (MNIST has white digits on black background)
-        image_array = np.array(image)
-        image_array = 255 - image_array  # Invert
-        
-        # Normalize
-        image_array = image_array.astype('float32') / 255.0
+        # Convert to array and normalize
+        image_array = np.array(image).astype('float32') / 255.0
         
         # Reshape for model
         image_array = image_array.reshape(1, 28, 28, 1)
@@ -552,10 +557,8 @@ async def predict(file: UploadFile = File(...)):
         # Resize to 28x28
         image = image.resize((28, 28), Image.Resampling.LANCZOS)
         
-        # Convert to array and normalize
-        image_array = np.array(image)
-        image_array = 255 - image_array  # Invert if needed
-        image_array = image_array.astype('float32') / 255.0
+        # Convert to array and normalize (NO INVERSION)
+        image_array = np.array(image).astype('float32') / 255.0
         image_array = image_array.reshape(1, 28, 28, 1)
         
         # Make prediction
