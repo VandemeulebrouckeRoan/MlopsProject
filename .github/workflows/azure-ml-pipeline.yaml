@@ -18,7 +18,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -92,36 +92,51 @@ jobs:
     - name: Download Model
       shell: bash
       run: |
-        az extension add --name ml -y --upgrade
         az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
         
         echo "Downloading model from job: ${{ steps.run_pipeline.outputs.run_id }}"
         
-        # Download to current directory first to see structure
+        # Create download directory
+        mkdir -p ./model-downloads
+        
+        # Download the model_output
         az ml job download \
           --name ${{ steps.run_pipeline.outputs.run_id }} \
           --output-name model_output \
-          --download-path .
+          --download-path ./model-downloads
         
-        echo "Download complete. Contents of current directory:"
-        ls -la
+        echo "✅ Download complete"
+        echo "Structure:"
+        ls -R ./model-downloads
         
-        echo "Looking for any .keras files recursively:"
-        find . -name "*.keras" -type f
-        
-        echo "All files downloaded:"
-        find . -type f -newer /tmp 2>/dev/null || find . -type f | head -20
-        
-        # Try to find and copy model
+        # Find and copy model.keras
         mkdir -p ./model
-        if find . -name "model.keras" -type f -exec cp -v {} ./model/ \; ; then
-          echo "✅ Model copied"
+        echo "Searching for model.keras..."
+        find ./model-downloads -name "model.keras" -type f -print -exec cp {} ./model/ \;
+        
+        # Verify
+        if [ -f ./model/model.keras ]; then
+          echo "✅ Model found!"
           ls -lh ./model/
         else
-          echo "❌ No model.keras found. Full directory structure:"
-          ls -R
+          echo "❌ model.keras not found"
+          echo "All downloaded files:"
+          find ./model-downloads -type f
+          exit 1
         fi
-      continue-on-error: false
+
+    - name: Debug - Show Everything
+      if: always()
+      run: |
+        echo "=== Current Directory ==="
+        pwd
+        ls -la
+        
+        echo "=== Model Directory ==="
+        ls -la ./model/ || echo "No ./model directory"
+        
+        echo "=== All .keras files ==="
+        find . -name "*.keras" -type f || echo "No .keras files found"
 
     - name: Upload model artifact
       uses: actions/upload-artifact@v4
@@ -132,7 +147,7 @@ jobs:
 
   build-and-deploy:
     needs: setup-and-train
-    runs-on: self-hosted  # ✅ Changed to self-hosted
+    runs-on: self-hosted
     
     steps:
     - name: Checkout code
@@ -142,27 +157,17 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: mnist-model
-        path: ./model-download
-    
-    - name: Prepare Model for Docker
+        path: ./inference/model
+
+    - name: Verify Model Downloaded
       run: |
-        echo "📦 Downloaded model structure:"
-        ls -R ./model-download
-        
-        # Create inference/model directory
-        mkdir -p ./inference/model
-        
-        # Find and copy model.keras file
-        find ./model-download -name "model.keras" -type f -exec cp -v {} ./inference/model/ \;
-        
-        # Verify model is in place
-        if [ -f ./inference/model/model.keras ]; then
-          echo "✅ Model ready for Docker build"
-          ls -lh ./inference/model/
-        else
-          echo "❌ model.keras not found!"
+        echo "Checking model location..."
+        ls -la ./inference/model/
+        if [ ! -f ./inference/model/model.keras ]; then
+          echo "❌ Model not found!"
           exit 1
         fi
+        echo "✅ Model ready for Docker build"
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
