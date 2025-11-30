@@ -97,29 +97,29 @@ jobs:
         
         echo "Downloading model from job: ${{ steps.run_pipeline.outputs.run_id }}"
         
-        # Download the specific model_output from training component
+        # Download to current directory first to see structure
         az ml job download \
           --name ${{ steps.run_pipeline.outputs.run_id }} \
-          --download-path ./downloaded-model \
-          --output-name model_output
+          --output-name model_output \
+          --download-path .
         
-        echo "Download complete. Structure:"
-        ls -R ./downloaded-model
+        echo "Download complete. Contents of current directory:"
+        ls -la
         
-        # Find the model file
+        echo "Looking for any .keras files recursively:"
+        find . -name "*.keras" -type f
+        
+        echo "All files downloaded:"
+        find . -type f -newer /tmp 2>/dev/null || find . -type f | head -20
+        
+        # Try to find and copy model
         mkdir -p ./model
-        echo "Searching for model.keras..."
-        find ./downloaded-model -name "model.keras" -type f -exec cp -v {} ./model/ \;
-        
-        # Verify
-        if [ -f ./model/model.keras ]; then
-          echo "✅ Model ready for upload"
+        if find . -name "model.keras" -type f -exec cp -v {} ./model/ \; ; then
+          echo "✅ Model copied"
           ls -lh ./model/
         else
-          echo "❌ model.keras not found!"
-          echo "Available files:"
-          find ./downloaded-model -type f
-          exit 1
+          echo "❌ No model.keras found. Full directory structure:"
+          ls -R
         fi
       continue-on-error: false
 
