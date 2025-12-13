@@ -193,48 +193,58 @@ jobs:
         }
         Write-Host "Model ready for Docker build"
     
+    - name: Azure Login for ACR
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Login to Azure Container Registry
+      run: az acr login --name RvAzCr
+    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     
-    - name: Build Docker Image
-      run: docker build -t mnist-classifier:latest ./inference
-    
-    - name: Stop Old Container
+    - name: Build and Push Docker Image to ACR
       shell: powershell
       run: |
-        docker stop mnist-classifier-app 2>$null
-        docker rm mnist-classifier-app 2>$null
-      continue-on-error: true
-    
-    - name: Run Docker Container
-      shell: powershell
-      run: |
-        docker run -d `
-          --name mnist-classifier-app `
-          -p 8000:8000 `
-          --restart unless-stopped `
-          mnist-classifier:latest
+        Write-Host "Building Docker image..."
+        docker build -t rvazcr.azurecr.io/mnist-classifier:latest ./inference
+        docker build -t rvazcr.azurecr.io/mnist-classifier:${{ github.sha }} ./inference
         
-        Write-Host "Container started!"
-        Start-Sleep -Seconds 5
-        docker ps | Select-String mnist-classifier-app
+        Write-Host "Pushing to Azure Container Registry..."
+        docker push rvazcr.azurecr.io/mnist-classifier:latest
+        docker push rvazcr.azurecr.io/mnist-classifier:${{ github.sha }}
+        
+        Write-Host "✅ Image pushed to ACR successfully!"
     
-    - name: Test API
+    - name: Deploy to Local Kubernetes
       shell: powershell
       run: |
-        Start-Sleep -Seconds 3
-        Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing
-        Write-Host "API is responding!"
+        Write-Host "Deploying to Kubernetes..."
+        kubectl apply -f kubernetes/deployment.yaml
+        kubectl apply -f kubernetes/service.yaml
+        
+        Write-Host "Waiting for deployment to be ready..."
+        kubectl rollout status deployment/mnist-classifier --timeout=5m
+        
+        Write-Host "✅ Kubernetes deployment successful!"
     
-    - name: Display Access Information
+    - name: Display Deployment Information
       shell: powershell
       run: |
         Write-Host "========================================="
-        Write-Host "Deployment Complete!"
+        Write-Host "Kubernetes Deployment Complete!"
         Write-Host "========================================="
         Write-Host ""
-        Write-Host "Web UI: http://localhost:8000"
-        Write-Host "API Docs: http://localhost:8000/docs"
-        Write-Host "Health: http://localhost:8000/health"
+        Write-Host "Pods:"
+        kubectl get pods -l app=mnist-classifier
+        Write-Host ""
+        Write-Host "Service:"
+        kubectl get service mnist-classifier-service
+        Write-Host ""
+        Write-Host "To access the application:"
+        Write-Host "1. Get service URL: kubectl get service mnist-classifier-service"
+        Write-Host "2. For Minikube: minikube service mnist-classifier-service --url"
+        Write-Host "3. For Docker Desktop: http://localhost (check port mapping)"
         Write-Host ""
         Write-Host "========================================="
